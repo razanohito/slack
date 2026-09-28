@@ -127,7 +127,18 @@ h1 .dots i {
 h1 .dots i:nth-child(2) { animation-delay: .2s; }
 h1 .dots i:nth-child(3) { animation-delay: .4s; }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-.tag { color: var(--muted); margin: 6px 0 0; font-weight: 700; }
+.tag { color: var(--muted); margin: 6px 0 0; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.sync {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 2px 10px 2px 8px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+}
+.sync::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.sync[data-s="ok"]::before { background: var(--ok); }
+.sync[data-s="saving"]::before { background: var(--home); animation: blink 1s ease-in-out infinite; }
+.sync[data-s="error"] { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
+.sync[data-s="error"]::before { background: var(--danger); }
+@keyframes blink { 50% { opacity: .3; } }
 
 .stats { display: flex; gap: 10px; flex-wrap: wrap; }
 .stat {
@@ -414,7 +425,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
   <header class="head">
     <div>
       <h1>ビー玉TODO <span class="dots" aria-hidden="true"><i style="--c:var(--work)"></i><i style="--c:var(--home)"></i><i style="--c:var(--play)"></i></span></h1>
-      <p class="tag">終わらせるたびに、ビー玉がひとつ貯まる。</p>
+      <p class="tag">終わらせるたびに、ビー玉がひとつ貯まる。 <span class="sync" id="sync" data-s="local">この端末に保存</span></p>
     </div>
     <div class="stats" aria-label="今日の状況">
       <div class="stat"><b id="s-today">0</b><span>今日の完了</span></div>
@@ -460,7 +471,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     <section class="card">
       <h2>ごほうびジャー <small id="jar-count">0 個</small></h2>
       <div class="jar-box"><canvas id="jar" aria-label="完了したタスクの数だけビー玉が入ったジャー"></canvas></div>
-      <p class="jar-note">片付けたタスクのビー玉も残ります</p>
+      <p class="jar-note">片付けたタスクのビー玉も残ります。スマホとPCで同じジャーが見られます</p>
     </section>
     <section class="card">
       <h2>レベル</h2>
@@ -505,20 +516,86 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     return {
       hint: true, filter: 'all', cat: 'all', pickCat: 'work', pickPri: 2,
       tasks: [
-        { id: uid(), text: '企画書のたたき台を送る', cat: 'work', pri: 3, due: addDays(0), done: false },
-        { id: uid(), text: '観葉植物に水をやる', cat: 'home', pri: 1, due: addDays(1), done: false },
-        { id: uid(), text: '英単語アプリを15分', cat: 'learn', pri: 2, due: '', done: false },
-        { id: uid(), text: '夜に20分ウォーキング', cat: 'health', pri: 2, due: addDays(0), done: false },
-        { id: uid(), text: '週末のキャンプ場を予約', cat: 'play', pri: 2, due: addDays(3), done: false },
-        { id: uid(), text: '経費精算を提出', cat: 'work', pri: 2, due: addDays(-1), done: true, doneAt: t - day },
-        { id: uid(), text: 'ストレッチ10分', cat: 'health', pri: 1, due: '', done: true, doneAt: t - 2 * day },
-        { id: uid(), text: '本を1章読む', cat: 'learn', pri: 1, due: '', done: true, doneAt: t - 2 * day, archived: true },
+        { id: uid(), text: '企画書のたたき台を送る', cat: 'work', pri: 3, due: addDays(0), done: false, created: t - 0 },
+        { id: uid(), text: '観葉植物に水をやる', cat: 'home', pri: 1, due: addDays(1), done: false, created: t - 1 },
+        { id: uid(), text: '英単語アプリを15分', cat: 'learn', pri: 2, due: '', done: false, created: t - 2 },
+        { id: uid(), text: '夜に20分ウォーキング', cat: 'health', pri: 2, due: addDays(0), done: false, created: t - 3 },
+        { id: uid(), text: '週末のキャンプ場を予約', cat: 'play', pri: 2, due: addDays(3), done: false, created: t - 4 },
+        { id: uid(), text: '経費精算を提出', cat: 'work', pri: 2, due: addDays(-1), done: true, doneAt: t - day, created: t - 5 },
+        { id: uid(), text: 'ストレッチ10分', cat: 'health', pri: 1, due: '', done: true, doneAt: t - 2 * day, created: t - 6 },
+        { id: uid(), text: '本を1章読む', cat: 'learn', pri: 1, due: '', done: true, doneAt: t - 2 * day, archived: true, created: t - 7 },
       ],
     };
   }
   function load() { try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* 保存できない環境でも動作は続ける */ } }
   let state = load() || seed();
+  state.tasks.forEach((t, i) => { if (!t.created) t.created = Date.now() - i; });
+
+  // ---------- sync (claude.ai の db: 本人専用の領域に保存) ----------
+  let remote = null, syncState = 'local', editing = false, dirty = false;
+  const chains = new Map();
+  const SYNC_TXT = { local: 'この端末に保存', saving: '同期中…', ok: 'スマホ・PCと同期済み', error: '同期できませんでした' };
+  function setSync(s) { syncState = s; const el = $('#sync'); el.dataset.s = s; el.textContent = SYNC_TXT[s]; }
+  const toDoc = t => ({ text: t.text, cat: t.cat, pri: t.pri, due: t.due || '', done: !!t.done, doneAt: t.doneAt ?? null, archived: !!t.archived, created: t.created });
+  function persist(t, del) {
+    save();
+    if (!remote) return;
+    const ref = remote.doc(t.id), body = del ? null : toDoc(t);
+    const next = (chains.get(t.id) || Promise.resolve())
+      .then(() => del ? ref.delete() : ref.set(body))
+      .catch(() => { setSync('error'); toast('保存できませんでした。通信状況を確認してください'); });
+    chains.set(t.id, next);
+    if (syncState !== 'error') setSync('saving');
+    next.finally(() => {
+      if (chains.get(t.id) !== next) return;
+      chains.delete(t.id);
+      if (!chains.size && syncState === 'saving') setSync('ok');
+    });
+  }
+  const sig = ts => JSON.stringify(ts.map(t => [t.id, toDoc(t)]));
+  function applyRemote(docs) {
+    const prev = sig(state.tasks);
+    state.tasks = docs.map(d => {
+      const t = { id: d.id, ...d.data() };
+      if (t.doneAt == null) delete t.doneAt;
+      return t;
+    }).sort((a, b) => b.created - a.created);
+    save();
+    if (sig(state.tasks) === prev) return;
+    if (editing) dirty = true; else render();
+  }
+  async function connect() {
+    if (!window.claude || !window.claude.use) return;
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    const me = user ? await user.id() : null;
+    if (!db || !me) return;
+    const board = db.doc(`data/users/${me}/board`);
+    const col = board.collection('tasks');
+    setSync('saving');
+    let first = true;
+    col.onSnapshot(async snap => {
+      if (first) {
+        if (snap.metadata.fromCache && snap.empty) return;
+        first = false;
+        if (snap.empty) {
+          const b = await board.get().catch(() => null);
+          if (!b) { setSync('error'); return; }
+          if (!b.exists) {
+            // 初めて同期する端末: この端末のタスクをアップロード
+            remote = col;
+            await board.set({ createdAt: Date.now() }).catch(() => {});
+            state.tasks.forEach(t => persist(t));
+            if (!state.tasks.length) setSync('ok');
+            return;
+          }
+        }
+        remote = col;
+      }
+      applyRemote(snap.docs);
+      if (!chains.size && syncState !== 'error') setSync('ok');
+    }, () => setSync('error'));
+  }
 
   // ---------- derived ----------
   const doneTasks = () => state.tasks.filter(t => t.done);
@@ -561,10 +638,11 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     const inp = $('#new-text');
     const text = inp.value.trim();
     if (!text) { inp.focus(); toast('やることを入力してください'); return; }
-    state.tasks.unshift({ id: uid(), text, cat: state.pickCat, pri: state.pickPri, due: $('#new-due').value, done: false });
+    const t = { id: uid(), text, cat: state.pickCat, pri: state.pickPri, due: $('#new-due').value, done: false, created: Date.now() };
+    state.tasks.unshift(t);
     inp.value = ''; $('#new-due').value = '';
     if (state.filter === 'done') state.filter = 'all';
-    save(); render();
+    persist(t); render();
   });
 
   // ---------- filters ----------
@@ -621,13 +699,15 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     const p = e.target.closest('.text'); if (!p) return;
     const li = p.closest('.task');
     const t = state.tasks.find(x => x.id === li.dataset.id);
+    editing = true;
     p.contentEditable = 'true'; p.focus();
     document.getSelection().selectAllChildren(p);
     const finish = (commit) => {
       p.removeEventListener('blur', onBlur); p.removeEventListener('keydown', onKey);
       const v = p.textContent.trim();
-      if (commit && v) t.text = v.slice(0, 120);
-      save(); render();
+      editing = false;
+      if (commit && v && t && v.slice(0, 120) !== t.text) { t.text = v.slice(0, 120); persist(t); }
+      dirty = false; render();
     };
     const onBlur = () => finish(true);
     const onKey = ev => {
@@ -644,7 +724,6 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
       t.doneAt = Date.now();
       const r = btn.getBoundingClientRect();
       burst(r.left + r.width / 2, r.top + r.height / 2, `var(--${t.cat})`);
-      jar.drop(t);
       const lvAfter = Math.floor(xpTotal() / XP_PER_LV);
       if (lvAfter > lvBefore) {
         toast(`レベル ${lvAfter + 1} になりました！`);
@@ -652,31 +731,30 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
       } else toast(`+${priOf(t.pri).xp} XP　ビー玉がひとつ増えました`);
     } else {
       delete t.doneAt;
-      jar.remove(t.id);
     }
-    save(); render();
+    persist(t); render();
   }
   let lastRemoved = null;
   function remove(t, li) {
-    const idx = state.tasks.indexOf(t);
+    const idx = Math.max(0, state.tasks.indexOf(t));
     li.classList.add('leaving');
     setTimeout(() => {
-      state.tasks.splice(idx, 1);
-      if (t.done) jar.remove(t.id);
+      const i = state.tasks.indexOf(t);
+      if (i > -1) state.tasks.splice(i, 1);
       lastRemoved = { t, idx };
-      save(); render();
+      persist(t, true); render();
       toast('削除しました', '元に戻す', () => {
         if (!lastRemoved) return;
         state.tasks.splice(lastRemoved.idx, 0, lastRemoved.t);
-        if (lastRemoved.t.done) jar.drop(lastRemoved.t);
-        lastRemoved = null; save(); render();
+        persist(lastRemoved.t);
+        lastRemoved = null; render();
       });
     }, reduce ? 0 : 280);
   }
   $('#sweep').addEventListener('click', () => {
     const n = state.tasks.filter(t => t.done && !t.archived).length;
-    state.tasks.forEach(t => { if (t.done) t.archived = true; });
-    save(); render(); toast(`${n}件を片付けました。ビー玉はジャーに残っています`);
+    state.tasks.forEach(t => { if (t.done && !t.archived) { t.archived = true; persist(t); } });
+    render(); toast(`${n}件を片付けました。ビー玉はジャーに残っています`);
   });
   $('#hint-close').addEventListener('click', () => { state.hint = false; save(); render(); });
 
@@ -703,7 +781,8 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     $('#week').innerHTML = html;
   }
 
-  function render() { renderPickers(); renderFilters(); renderList(); renderSide(); }
+  function render() { renderPickers(); renderFilters(); renderList(); renderSide(); if (jarReady) jar.sync(doneTasks()); }
+  let jarReady = false;
 
   // ---------- toast ----------
   let toastTimer;
@@ -833,6 +912,17 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
         matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => draw());
       },
       drop(t) { add(t); radius(); kick(); },
+      sync(tasks) {
+        const want = new Map(tasks.map(t => [t.id, t]));
+        const before = balls.length;
+        balls = balls.filter(b => want.has(b.id));
+        const removed = before - balls.length;
+        const have = new Set(balls.map(b => b.id));
+        let added = 0;
+        want.forEach((t, id) => { if (!have.has(id)) { add(t); added++; } });
+        if (removed) balls.forEach(b => b.vy -= 1);
+        if (added || removed) { radius(); kick(); }
+      },
       remove(id) {
         const i = balls.findIndex(b => b.id === id);
         if (i > -1) { balls.splice(i, 1); radius(); balls.forEach(b => b.vy -= 1); kick(); }
@@ -875,7 +965,9 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && !document.activeElement.isContentEditable) { e.preventDefault(); $('#new-text').focus(); }
   });
 
-  render();
   jar.init(doneTasks());
+  jarReady = true;
+  render();
+  connect();
 })();
 </script>
