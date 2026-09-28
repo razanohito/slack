@@ -17,7 +17,7 @@ Claude が `ArtifactData` ツールで両方を読み書きして橋渡ししま
 ```json
 {
   "text": "一文で書いた、やること",
-  "cat": "work", "pri": 3,
+  "cat": "as（as / kodomo / kunitachi / megalos / lesson / report / other）", "pri": 3,
   "due": "YYYY-MM-DD（defer なら until、無ければ案件の期限）",
   "done": false, "doneAt": null, "archived": false, "hidden": false,
   "created": 1790584282960,

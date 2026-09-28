@@ -18,11 +18,13 @@
   --glass-fill: rgba(255, 255, 255, 0.55);
   --danger: #D93A4E;
   --ok: #129C74;
-  --work: #3D7BFF;
-  --home: #FF9F1C;
-  --learn: #8B5CF6;
-  --health: #16B889;
-  --play: #FF4F79;
+  --as: #3D7BFF;
+  --kodomo: #FF9F1C;
+  --kunitachi: #16B889;
+  --megalos: #FF4F79;
+  --lesson: #8B5CF6;
+  --report: #D9A300;
+  --other: #8A93A8;
   --shadow: 0 1px 0 rgba(24, 32, 58, 0.06), 0 6px 18px -10px rgba(24, 32, 58, 0.25);
   --display: "Dela Gothic One", "Hiragino Sans", "Yu Gothic", sans-serif;
   --body: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", sans-serif;
@@ -42,11 +44,13 @@
     --glass-fill: rgba(40, 52, 84, 0.45);
     --danger: #FF6B7D;
     --ok: #3FD6A8;
-    --work: #5E93FF;
-    --home: #FFB347;
-    --learn: #A37CFF;
-    --health: #2FD3A2;
-    --play: #FF6F92;
+    --as: #5E93FF;
+    --kodomo: #FFB347;
+    --kunitachi: #2FD3A2;
+    --megalos: #FF6F92;
+    --lesson: #A37CFF;
+    --report: #F2C230;
+    --other: #A3ABC0;
     --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 8px 22px -12px rgba(0, 0, 0, 0.7);
   }
 }
@@ -64,11 +68,13 @@
   --glass-fill: rgba(40, 52, 84, 0.45);
   --danger: #FF6B7D;
   --ok: #3FD6A8;
-  --work: #5E93FF;
-  --home: #FFB347;
-  --learn: #A37CFF;
-  --health: #2FD3A2;
-  --play: #FF6F92;
+  --as: #5E93FF;
+  --kodomo: #FFB347;
+  --kunitachi: #2FD3A2;
+  --megalos: #FF6F92;
+  --lesson: #A37CFF;
+  --report: #F2C230;
+  --other: #A3ABC0;
   --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 8px 22px -12px rgba(0, 0, 0, 0.7);
 }
 
@@ -135,7 +141,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
 }
 .sync::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .sync[data-s="ok"]::before { background: var(--ok); }
-.sync[data-s="saving"]::before { background: var(--home); animation: blink 1s ease-in-out infinite; }
+.sync[data-s="saving"]::before { background: var(--kodomo); animation: blink 1s ease-in-out infinite; }
 .sync[data-s="error"] { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
 .sync[data-s="error"]::before { background: var(--danger); }
 @keyframes blink { 50% { opacity: .3; } }
@@ -271,7 +277,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
 .hint button { white-space: nowrap; border: 0; background: none; font-weight: 700; color: var(--accent); }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .task {
-  --c: var(--work);
+  --c: var(--as);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
@@ -325,7 +331,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
 .meta span { border-radius: 999px; padding: 1px 9px; background: var(--surface-2); color: var(--muted); }
 .meta .c { background: color-mix(in srgb, var(--c) 16%, var(--surface)); color: var(--ink); }
 .meta .late { background: color-mix(in srgb, var(--danger) 16%, var(--surface)); color: var(--danger); }
-.meta .today { background: color-mix(in srgb, var(--home) 22%, var(--surface)); color: var(--ink); }
+.meta .today { background: color-mix(in srgb, var(--kodomo) 22%, var(--surface)); color: var(--ink); }
 .inote { margin: 6px 0 0; font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 8px; max-width: 64ch; }
 .meta .from { background: var(--ink); color: var(--bg); }
 .meta .open { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; padding: 1px 4px; }
@@ -427,7 +433,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
 <div class="wrap">
   <header class="head">
     <div>
-      <h1>ビー玉TODO <span class="dots" aria-hidden="true"><i style="--c:var(--work)"></i><i style="--c:var(--home)"></i><i style="--c:var(--play)"></i></span></h1>
+      <h1>ビー玉TODO <span class="dots" aria-hidden="true"><i style="--c:var(--as)"></i><i style="--c:var(--kunitachi)"></i><i style="--c:var(--megalos)"></i></span></h1>
       <p class="tag">終わらせるたびに、ビー玉がひとつ貯まる。 <span class="sync" id="sync" data-s="local">この端末に保存</span></p>
     </div>
     <div class="stats" aria-label="今日の状況">
@@ -494,11 +500,13 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
 (() => {
   const KEY = 'biidama-todo-v1';
   const CATS = [
-    { id: 'work', name: '仕事' },
-    { id: 'home', name: '家のこと' },
-    { id: 'learn', name: '学び' },
-    { id: 'health', name: '健康' },
-    { id: 'play', name: 'あそび' },
+    { id: 'as', name: '新渡戸AS' },
+    { id: 'kodomo', name: '新渡戸こども園' },
+    { id: 'kunitachi', name: '国立学園' },
+    { id: 'megalos', name: 'メガロス' },
+    { id: 'lesson', name: 'レッスン' },
+    { id: 'report', name: 'レポート' },
+    { id: 'other', name: 'その他' },
   ];
   const PRIS = [
     { id: 3, name: '高', xp: 30 },
@@ -517,24 +525,38 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
   function seed() {
     const t = Date.now(), day = 864e5;
     return {
-      hint: true, filter: 'all', cat: 'all', pickCat: 'work', pickPri: 2,
-      tasks: [
-        { id: uid(), text: '企画書のたたき台を送る', cat: 'work', pri: 3, due: addDays(0), done: false, created: t - 0 },
-        { id: uid(), text: '観葉植物に水をやる', cat: 'home', pri: 1, due: addDays(1), done: false, created: t - 1 },
-        { id: uid(), text: '英単語アプリを15分', cat: 'learn', pri: 2, due: '', done: false, created: t - 2 },
-        { id: uid(), text: '夜に20分ウォーキング', cat: 'health', pri: 2, due: addDays(0), done: false, created: t - 3 },
-        { id: uid(), text: '週末のキャンプ場を予約', cat: 'play', pri: 2, due: addDays(3), done: false, created: t - 4 },
-        { id: uid(), text: '経費精算を提出', cat: 'work', pri: 2, due: addDays(-1), done: true, doneAt: t - day, created: t - 5 },
-        { id: uid(), text: 'ストレッチ10分', cat: 'health', pri: 1, due: '', done: true, doneAt: t - 2 * day, created: t - 6 },
-        { id: uid(), text: '本を1章読む', cat: 'learn', pri: 1, due: '', done: true, doneAt: t - 2 * day, archived: true, created: t - 7 },
-      ],
+      hint: true, filter: 'all', cat: 'all', pickCat: 'as', pickPri: 2,
+      tasks: samples(),
     };
+  }
+  // v1 のサンプル（家のこと・あそび等）。見つけたら新しいサンプルに入れ替える
+  const OLD_SAMPLES = ['企画書のたたき台を送る', '観葉植物に水をやる', '英単語アプリを15分', '夜に20分ウォーキング', '週末のキャンプ場を予約', '経費精算を提出', 'ストレッチ10分', '本を1章読む'];
+  function samples() {
+    const t = Date.now(), day = 864e5;
+    return [
+        { id: uid(), text: '10月のシフト表を確認して返信する', cat: 'as', pri: 3, due: addDays(0), done: false, created: t - 0 },
+        { id: uid(), text: '次回レッスンの教材を準備する', cat: 'kodomo', pri: 2, due: addDays(2), done: false, created: t - 1 },
+        { id: uid(), text: '保護者向けおたよりの原稿を確認する', cat: 'kunitachi', pri: 2, due: addDays(3), done: false, created: t - 2 },
+        { id: uid(), text: '体験会の参加人数を確認する', cat: 'megalos', pri: 1, due: addDays(1), done: false, created: t - 3 },
+        { id: uid(), text: '来週のカリキュラムを見直す', cat: 'lesson', pri: 2, due: '', done: false, created: t - 4 },
+        { id: uid(), text: '9月分の実施レポートを提出する', cat: 'report', pri: 3, due: addDays(-1), done: true, doneAt: t - day, created: t - 5 },
+        { id: uid(), text: '教材の在庫をチェックする', cat: 'lesson', pri: 1, due: '', done: true, doneAt: t - 2 * day, created: t - 6 },
+    ];
   }
   function load() { try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* 保存できない環境でも動作は続ける */ } }
   let state = load() || seed();
   state.tasks.forEach((t, i) => { if (!t.created) t.created = Date.now() - i; });
   if (!Array.isArray(state.inbox)) state.inbox = [];
+  const CAT_IDS = new Set(CATS.map(c => c.id));
+  const fixCat = t => { if (!CAT_IDS.has(t.cat)) t.cat = 'other'; return t; };
+  if (state.tasks.some(t => !CAT_IDS.has(t.cat) && OLD_SAMPLES.includes(t.text))) {
+    state.tasks = state.tasks.filter(t => !OLD_SAMPLES.includes(t.text)).concat(samples());
+    state.hint = true;
+  }
+  state.tasks.forEach(fixCat);
+  if (!CAT_IDS.has(state.pickCat)) state.pickCat = 'as';
+  if (state.cat !== 'all' && !CAT_IDS.has(state.cat)) state.cat = 'all';
   // 滞留ボードから Claude が届けた案件（inbox）と自分のタスクを合わせた一覧
   const allTasks = () => state.tasks.concat(state.inbox.filter(t => !t.hidden));
 
@@ -575,7 +597,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
   function applyRemote(docs) {
     const prev = sig(state.tasks);
     state.tasks = docs.map(d => {
-      const t = { id: d.id, ...d.data() };
+      const t = fixCat({ id: d.id, ...d.data() });
       if (t.doneAt == null) delete t.doneAt;
       return t;
     }).sort((a, b) => b.created - a.created);
@@ -592,7 +614,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     inboxCol.onSnapshot(snap => {
       const prev = JSON.stringify(state.inbox);
       state.inbox = snap.docs.map(d => {
-        const t = { id: d.id, ...d.data(), inbox: true };
+        const t = fixCat({ id: d.id, ...d.data(), inbox: true });
         if (t.doneAt == null) delete t.doneAt;
         return t;
       });
@@ -842,7 +864,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
   let colors = {};
   function readColors() {
     const cs = getComputedStyle(document.documentElement);
-    ['work', 'home', 'learn', 'health', 'play', 'glass', 'glass-fill', 'accent', 'muted'].forEach(k => colors[k] = cs.getPropertyValue('--' + k).trim());
+    ['as', 'kodomo', 'kunitachi', 'megalos', 'lesson', 'report', 'other', 'glass', 'glass-fill', 'accent', 'muted'].forEach(k => colors[k] = cs.getPropertyValue('--' + k).trim());
   }
   readColors();
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
@@ -976,7 +998,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     if (reduce) return;
     const dpr = devicePixelRatio || 1;
     fx.width = innerWidth * dpr; fx.height = innerHeight * dpr; fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const pal = ['work', 'home', 'learn', 'health', 'play'].map(k => colors[k]);
+    const pal = ['as', 'kodomo', 'kunitachi', 'megalos', 'lesson', 'report'].map(k => colors[k]);
     const main = cssColor ? colors[cssColor.slice(6, -1)] : null;
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2, s = 3 + Math.random() * 6;
