@@ -326,6 +326,9 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
 .meta .c { background: color-mix(in srgb, var(--c) 16%, var(--surface)); color: var(--ink); }
 .meta .late { background: color-mix(in srgb, var(--danger) 16%, var(--surface)); color: var(--danger); }
 .meta .today { background: color-mix(in srgb, var(--home) 22%, var(--surface)); color: var(--ink); }
+.inote { margin: 6px 0 0; font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 8px; max-width: 64ch; }
+.meta .from { background: var(--ink); color: var(--bg); }
+.meta .open { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; padding: 1px 4px; }
 .meta .xp { color: var(--accent); background: transparent; padding-left: 0; }
 .del {
   border: 0; background: transparent; color: var(--muted);
@@ -531,6 +534,9 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* 保存できない環境でも動作は続ける */ } }
   let state = load() || seed();
   state.tasks.forEach((t, i) => { if (!t.created) t.created = Date.now() - i; });
+  if (!Array.isArray(state.inbox)) state.inbox = [];
+  // 滞留ボードから Claude が届けた案件（inbox）と自分のタスクを合わせた一覧
+  const allTasks = () => state.tasks.concat(state.inbox.filter(t => !t.hidden));
 
   // ---------- sync (claude.ai の db: 本人専用の領域に保存) ----------
   let remote = null, syncState = 'local', editing = false, dirty = false;
@@ -538,12 +544,24 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
   const SYNC_TXT = { local: 'この端末に保存', saving: '同期中…', ok: 'スマホ・PCと同期済み', error: '同期できませんでした' };
   function setSync(s) { syncState = s; const el = $('#sync'); el.dataset.s = s; el.textContent = SYNC_TXT[s]; }
   const toDoc = t => ({ text: t.text, cat: t.cat, pri: t.pri, due: t.due || '', done: !!t.done, doneAt: t.doneAt ?? null, archived: !!t.archived, created: t.created });
+  let inboxCol = null;
   function persist(t, del) {
     save();
+    if (t.inbox) return persistInbox(t);
     if (!remote) return;
     const ref = remote.doc(t.id), body = del ? null : toDoc(t);
+    queue(t.id, () => del ? ref.delete() : ref.set(body));
+  }
+  function persistInbox(t) {
+    if (!inboxCol) return;
+    const ref = inboxCol.doc(t.id);
+    const body = { text: t.text, done: !!t.done, doneAt: t.doneAt ?? null, archived: !!t.archived, hidden: !!t.hidden };
+    queue(t.id, () => ref.update(body));
+  }
+  function queue(id, write) {
+    const t = { id };
     const next = (chains.get(t.id) || Promise.resolve())
-      .then(() => del ? ref.delete() : ref.set(body))
+      .then(write)
       .catch(() => { setSync('error'); toast('保存できませんでした。通信状況を確認してください'); });
     chains.set(t.id, next);
     if (syncState !== 'error') setSync('saving');
@@ -570,6 +588,18 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
     const me = user ? await user.id() : null;
     if (!db || !me) return;
+    inboxCol = db.collection('inbox');
+    inboxCol.onSnapshot(snap => {
+      const prev = JSON.stringify(state.inbox);
+      state.inbox = snap.docs.map(d => {
+        const t = { id: d.id, ...d.data(), inbox: true };
+        if (t.doneAt == null) delete t.doneAt;
+        return t;
+      });
+      save();
+      if (JSON.stringify(state.inbox) === prev) return;
+      if (editing) dirty = true; else render();
+    }, () => {});
     const board = db.doc(`data/users/${me}/board`);
     const col = board.collection('tasks');
     setSync('saving');
@@ -598,7 +628,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
   }
 
   // ---------- derived ----------
-  const doneTasks = () => state.tasks.filter(t => t.done);
+  const doneTasks = () => allTasks().filter(t => t.done);
   const xpTotal = () => doneTasks().reduce((s, t) => s + priOf(t.pri).xp, 0);
   function streak() {
     const days = new Set(doneTasks().map(t => ymd(t.doneAt)));
@@ -647,7 +677,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
 
   // ---------- filters ----------
   function renderFilters() {
-    const live = state.tasks.filter(t => !t.archived);
+    const live = allTasks().filter(t => !t.archived);
     const n = { all: live.length, active: live.filter(t => !t.done).length, done: live.filter(t => t.done).length };
     const tabs = [['all', 'すべて'], ['active', '未完了'], ['done', '完了']];
     $('#tabs').innerHTML = tabs.map(([id, name]) =>
@@ -672,13 +702,14 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
       <button class="check" type="button" aria-pressed="${t.done}" aria-label="${t.done ? '未完了に戻す' : '完了にする'}"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
       <div>
         <p class="text" title="ダブルクリックで編集">${esc(t.text)}</p>
-        <div class="meta"><span class="c">${catName(t.cat)}</span><span>優先度 ${priOf(t.pri).name}</span>${due ? `<span class="${due.cls}">${due.txt}</span>` : ''}<span class="xp">+${priOf(t.pri).xp} XP</span></div>
+        <div class="meta">${t.inbox ? `<span class="from" title="${esc(t.note || '')}">滞留ボード</span>` : ''}${t.inbox && t.link ? `<a class="open" href="${esc(t.link)}" target="_blank" rel="noopener">${esc(t.linkLabel || '開く')}</a>` : ''}<span class="c">${catName(t.cat)}</span><span>優先度 ${priOf(t.pri).name}</span>${due ? `<span class="${due.cls}">${due.txt}</span>` : ''}<span class="xp">+${priOf(t.pri).xp} XP</span></div>
+        ${t.inbox && t.note && !t.done ? `<p class="inote">${esc(t.note)}</p>` : ''}
       </div>
       <button class="del" type="button" aria-label="「${esc(t.text)}」を削除">×</button>
     </li>`;
   }
   function renderList() {
-    let items = state.tasks.filter(t => !t.archived);
+    let items = allTasks().filter(t => !t.archived).sort((a, b) => b.created - a.created);
     if (state.cat !== 'all') items = items.filter(t => t.cat === state.cat);
     if (state.filter === 'active') items = items.filter(t => !t.done);
     if (state.filter === 'done') items = items.filter(t => t.done);
@@ -686,19 +717,19 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     $('#list').innerHTML = items.length ? items.map(taskHTML).join('') :
       `<li class="empty"><b>${state.filter === 'done' ? 'まだ完了はありません' : 'すっきり！'}</b>${state.filter === 'done' ? 'ひとつ終わらせてビー玉を増やしましょう' : 'やることは全部片付いています'}</li>`;
     $('#hint').hidden = !state.hint;
-    $('#sweep').hidden = !state.tasks.some(t => t.done && !t.archived);
+    $('#sweep').hidden = !allTasks().some(t => t.done && !t.archived);
   }
 
   $('#list').addEventListener('click', e => {
     const li = e.target.closest('.task'); if (!li) return;
-    const t = state.tasks.find(x => x.id === li.dataset.id); if (!t) return;
+    const t = allTasks().find(x => x.id === li.dataset.id); if (!t) return;
     if (e.target.closest('.check')) toggle(t, e.target.closest('.check'));
     else if (e.target.closest('.del')) remove(t, li);
   });
   $('#list').addEventListener('dblclick', e => {
     const p = e.target.closest('.text'); if (!p) return;
     const li = p.closest('.task');
-    const t = state.tasks.find(x => x.id === li.dataset.id);
+    const t = allTasks().find(x => x.id === li.dataset.id);
     editing = true;
     p.contentEditable = 'true'; p.focus();
     document.getSelection().selectAllChildren(p);
@@ -736,6 +767,14 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
   }
   let lastRemoved = null;
   function remove(t, li) {
+    if (t.inbox) {
+      li.classList.add('leaving');
+      setTimeout(() => {
+        t.hidden = true; persist(t); render();
+        toast('一覧から外しました', '元に戻す', () => { t.hidden = false; persist(t); render(); });
+      }, reduce ? 0 : 280);
+      return;
+    }
     const idx = Math.max(0, state.tasks.indexOf(t));
     li.classList.add('leaving');
     setTimeout(() => {
@@ -752,8 +791,8 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     }, reduce ? 0 : 280);
   }
   $('#sweep').addEventListener('click', () => {
-    const n = state.tasks.filter(t => t.done && !t.archived).length;
-    state.tasks.forEach(t => { if (t.done && !t.archived) { t.archived = true; persist(t); } });
+    const n = allTasks().filter(t => t.done && !t.archived).length;
+    allTasks().forEach(t => { if (t.done && !t.archived) { t.archived = true; persist(t); } });
     render(); toast(`${n}件を片付けました。ビー玉はジャーに残っています`);
   });
   $('#hint-close').addEventListener('click', () => { state.hint = false; save(); render(); });
@@ -763,7 +802,7 @@ h1 .dots i:nth-child(3) { animation-delay: .4s; }
     const today = ymd(Date.now());
     const done = doneTasks();
     $('#s-today').textContent = done.filter(t => ymd(t.doneAt) === today).length;
-    $('#s-left').textContent = state.tasks.filter(t => !t.done).length;
+    $('#s-left').textContent = allTasks().filter(t => !t.done).length;
     $('#s-streak').textContent = streak();
     $('#jar-count').textContent = `${done.length} 個`;
     const xp = xpTotal();
