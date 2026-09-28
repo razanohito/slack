@@ -247,17 +247,16 @@ function threatCell(t) {
 {
   const s = base("料金①：3年総額で見ると、ステモンは通学型の中央帯（約46.5万円）", "② PRICE");
   const sorted = [...COS].sort((a, b) => b.y3 - a.y3);
-  const labels = sorted.map(c => c.short);
-  s.addChart(pres.charts.BAR, [
-    { name: "ステモン", labels, values: sorted.map(c => c.key === "stemon" ? Math.round(c.y3 / 1000) / 10 : 0) },
-    { name: "競合", labels, values: sorted.map(c => c.key === "stemon" ? 0 : Math.round(c.y3 / 1000) / 10) },
-  ], {
-    x: M, y: 1.35, w: 7.9, h: 5.6, barDir: "bar", barGrouping: "stacked", chartColors: [C.yel, C.navy],
-    catAxisLabelFontFace: FONT, catAxisLabelFontSize: 10, catAxisLabelColor: C.ink, catAxisOrientation: "maxMin",
-    valAxisHidden: true, valGridLine: { style: "none" }, catGridLine: { style: "none" },
-    showValue: true, dataLabelPosition: "inEnd", dataLabelFormatCode: '0.0"万";;', dataLabelFontSize: 9, dataLabelColor: C.white, dataLabelFontFace: FONT,
-    showLegend: false, barGapWidthPct: 45,
-    showTitle: true, title: "3年継続の総額（試算、万円）", titleFontFace: FONT, titleFontSize: 12, titleColor: C.navy,
+  // Googleスライド変換でネイティブグラフのラベルが崩れるため、図形で描画する
+  s.addText("3年継続の総額（試算、万円）", { x: M, y: 1.35, w: 7.9, h: 0.3, fontFace: FONT, fontSize: 12, bold: true, color: C.navy, align: "center", margin: 0, isTextBox: true });
+  const lx = M, lw = 1.75, bx = lx + lw + 0.1, bwMax = 7.9 - lw - 0.1 - 0.85;
+  const top = 1.8, rowH = 0.36, barH = 0.25, maxV = sorted[0].y3;
+  sorted.forEach((c, i) => {
+    const y = top + i * rowH, st = c.key === "stemon";
+    const bw = bwMax * c.y3 / maxV;
+    s.addText(c.short, { x: lx, y, w: lw, h: barH, fontFace: FONT, fontSize: 10, bold: st, color: C.ink, align: "right", valign: "middle", margin: 0, isTextBox: true });
+    s.addShape(pres.shapes.RECTANGLE, { x: bx, y, w: bw, h: barH, fill: { color: st ? C.yel : C.navy }, line: { color: st ? C.yel : C.navy } });
+    s.addText(`${man(c.y3)}万`, { x: bx + bw + 0.08, y, w: 0.8, h: barH, fontFace: FONT, fontSize: 10, bold: st, color: C.ink, valign: "middle", margin: 0, isTextBox: true });
   });
   const x = 8.75, w = W - M - x;
   const pts = [
